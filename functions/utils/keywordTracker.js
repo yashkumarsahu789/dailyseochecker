@@ -1,24 +1,12 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import cron from "node-cron";
-import { readDb, writeDb } from "./scheduler.js";
+import { readDb, writeDb } from "../firestore.js";
 
 // ============ KEYWORD RANK TRACKER ============
-// Checks Google search ranking for tracked keywords daily
-// Uses search scraping (for personal use only)
-
-export function startKeywordTracker() {
-  console.log("✅ Keyword Rank Tracker initialized (daily at 1:00 AM)");
-
-  // Run daily at 1:00 AM (after SEO audit at midnight)
-  cron.schedule("0 1 * * *", async () => {
-    console.log("🔑 Running daily keyword rank check...");
-    await checkAllKeywords();
-  });
-}
+// Called by Firebase Scheduled Function daily at 1 AM
 
 export async function checkAllKeywords() {
-  const db = readDb();
+  const db = await readDb();
   if (!db.keywordRanks) db.keywordRanks = [];
 
   for (const site of db.websites) {
@@ -33,10 +21,10 @@ export async function checkAllKeywords() {
         const position = await getGoogleRank(keyword, hostname);
 
         db.keywordRanks.push({
-          siteId: site.id,
+          siteId: Number(site.id),
           keyword,
-          position, // 0 = not found in top 100
-          date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+          position,
+          date: new Date().toISOString().slice(0, 10),
           timestamp: new Date().toISOString(),
         });
 
@@ -44,7 +32,7 @@ export async function checkAllKeywords() {
           `   "${keyword}" → ${position > 0 ? `#${position}` : "Not in top 100"}`,
         );
 
-        // Rate limit: wait 2-5 seconds between queries
+        // Rate limit
         await sleep(2000 + Math.random() * 3000);
       } catch (err) {
         console.error(`   ❌ Error checking "${keyword}":`, err.message);
@@ -52,7 +40,7 @@ export async function checkAllKeywords() {
     }
   }
 
-  writeDb(db);
+  await writeDb(db);
   console.log("✅ Keyword rank check completed.");
 }
 
@@ -76,7 +64,6 @@ async function getGoogleRank(keyword, targetDomain) {
     let position = 0;
     let rank = 0;
 
-    // Search through organic results
     $("div.g, div[data-sokoban-container]").each((_, el) => {
       rank++;
       const links = $(el).find("a[href]");
@@ -84,14 +71,13 @@ async function getGoogleRank(keyword, targetDomain) {
         const href = $(links[i]).attr("href") || "";
         if (href.includes(targetDomain)) {
           position = rank;
-          return false; // break
+          return false;
         }
       }
     });
 
     return position;
   } catch (err) {
-    // If Google blocks us, return 0 (unknown)
     console.error(`   Google search error for "${keyword}":`, err.message);
     return 0;
   }

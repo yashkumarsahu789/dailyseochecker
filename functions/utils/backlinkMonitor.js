@@ -1,23 +1,12 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import cron from "node-cron";
-import { readDb, writeDb } from "./scheduler.js";
+import { readDb, writeDb } from "../firestore.js";
 
 // ============ BACKLINK MONITOR ============
-// Checks for backlinks pointing to tracked sites using Google search queries
-// Runs daily at 2:00 AM
-
-export function startBacklinkMonitor() {
-  console.log("✅ Backlink Monitor initialized (daily at 2:00 AM)");
-
-  cron.schedule("0 2 * * *", async () => {
-    console.log("🔗 Running backlink check...");
-    await checkAllBacklinks();
-  });
-}
+// Called by Firebase Scheduled Function daily at 2 AM
 
 export async function checkAllBacklinks() {
-  const db = readDb();
+  const db = await readDb();
   if (!db.backlinks) db.backlinks = [];
 
   for (const site of db.websites) {
@@ -27,10 +16,9 @@ export async function checkAllBacklinks() {
 
       const newBacklinks = await findBacklinks(hostname);
 
-      // Merge with existing — track new and lost
       const existingUrls = new Set(
         db.backlinks
-          .filter((b) => b.siteId === site.id && b.active)
+          .filter((b) => String(b.siteId) === String(site.id) && b.active)
           .map((b) => b.sourceUrl),
       );
 
@@ -38,7 +26,7 @@ export async function checkAllBacklinks() {
         if (!existingUrls.has(bl.sourceUrl)) {
           db.backlinks.push({
             id: Date.now() + Math.random(),
-            siteId: site.id,
+            siteId: Number(site.id),
             sourceUrl: bl.sourceUrl,
             sourceDomain: bl.sourceDomain,
             anchorText: bl.anchorText,
@@ -48,23 +36,24 @@ export async function checkAllBacklinks() {
           });
           console.log(`   ✅ NEW backlink: ${bl.sourceDomain}`);
         } else {
-          // Update lastSeen for existing
           const existing = db.backlinks.find(
-            (b) => b.siteId === site.id && b.sourceUrl === bl.sourceUrl,
+            (b) =>
+              String(b.siteId) === String(site.id) &&
+              b.sourceUrl === bl.sourceUrl,
           );
           if (existing) existing.lastSeen = new Date().toISOString();
         }
       }
 
-      // Mark backlinks not found in latest scan as potentially lost
       const foundUrls = new Set(newBacklinks.map((b) => b.sourceUrl));
       db.backlinks
         .filter(
           (b) =>
-            b.siteId === site.id && b.active && !foundUrls.has(b.sourceUrl),
+            String(b.siteId) === String(site.id) &&
+            b.active &&
+            !foundUrls.has(b.sourceUrl),
         )
         .forEach((b) => {
-          // Only mark lost after 7 days of not being seen
           const daysSinceLastSeen =
             (Date.now() - new Date(b.lastSeen).getTime()) /
             (1000 * 60 * 60 * 24);
@@ -75,14 +64,13 @@ export async function checkAllBacklinks() {
           }
         });
 
-      // Rate-limit between sites
       await new Promise((r) => setTimeout(r, 3000));
     } catch (err) {
       console.error(`   ❌ Backlink check error for ${site.url}:`, err.message);
     }
   }
 
-  writeDb(db);
+  await writeDb(db);
   console.log("✅ Backlink check completed.");
 }
 
@@ -90,7 +78,6 @@ async function findBacklinks(targetDomain) {
   const backlinks = [];
 
   try {
-    // Method 1: Search Google for links to the domain
     const query = encodeURIComponent(
       `link:${targetDomain} -site:${targetDomain}`,
     );
@@ -112,7 +99,6 @@ async function findBacklinks(targetDomain) {
       const linkEl = $(el).find("a[href]").first();
       const href = linkEl.attr("href") || "";
 
-      // Filter out Google-owned or non-http links
       if (
         href.startsWith("http") &&
         !href.includes("google.com") &&

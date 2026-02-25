@@ -1,4 +1,4 @@
 // Central API config — used by all components
-// Set VITE_API_URL in .env or Vercel env vars for production
-export const API_BASE =
-  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+// In dev: Vite proxy forwards /api to Firebase emulator
+// In prod: Set VITE_API_URL to your Firebase Functions URL
+export const API_BASE = import.meta.env.VITE_API_URL || "/api";

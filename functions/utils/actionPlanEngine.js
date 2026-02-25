@@ -1,18 +1,10 @@
-import { readDb } from "./scheduler.js";
-import fs from "fs";
-import path from "path";
+import { readDb } from "../firestore.js";
 
 // ============ AI ACTION PLAN ENGINE ============
 // Analyzes audit data and generates a prioritized "Top 3 Fixes" action plan.
-// Uses a smart scoring algorithm:
-//   Score = Impact Weight × Effort Multiplier × Category Bonus
-// Where:
-//   Impact: High=30, Medium=15, Low=5
-//   Effort: Low=3x (quick wins first!), Medium=2x, High=1x
-//   Category Bonus: Technical/On-Page/Content get +10 (highest SEO ROI categories)
 
 const IMPACT_SCORE = { High: 30, Medium: 15, Low: 5 };
-const EFFORT_MULTIPLIER = { Low: 3, Medium: 2, High: 1 }; // quick wins first
+const EFFORT_MULTIPLIER = { Low: 3, Medium: 2, High: 1 };
 const PRIORITY_CATEGORIES = [
   "Technical",
   "On-Page",
@@ -21,8 +13,6 @@ const PRIORITY_CATEGORIES = [
   "Security",
 ];
 
-// ─── Inline checklist + metadata (mirrors src/constants/) ───
-// This avoids importing frontend modules into the backend.
 const CHECK_META = {
   "Content Analysis": {
     impact: "High",
@@ -354,31 +344,23 @@ const CHECK_META = {
   },
 };
 
-// Determine if a check passed or failed based on report.audits[checkKey]
 function didCheckPass(checkKey, taskName, report) {
-  if (!report || !report.audits) return null; // unknown
+  if (!report || !report.audits) return null;
   const audit = report.audits[checkKey];
-  if (!audit) return null; // check wasn't run
+  if (!audit) return null;
 
-  // Most checks use audit.status === "PASS"
   if (audit.status !== undefined) return audit.status === "PASS";
-
-  // Sitemap & robots use audit.exists
   if (audit.exists !== undefined) return audit.exists;
-
-  // Image compression: pass if missingAlt === 0
   if (checkKey === "images" && audit.missingAlt !== undefined)
     return audit.missingAlt === 0;
-
-  // Outbound links: pass if externalLinks > 0
   if (checkKey === "linkProfile" && taskName === "Outbound Links")
     return (audit.externalLinks || 0) > 0;
 
   return null;
 }
 
-export function generateActionPlan(siteId) {
-  const db = readDb();
+export async function generateActionPlan(siteId) {
+  const db = await readDb();
   const site = db.websites.find((w) => String(w.id) === String(siteId));
   if (!site) throw new Error("Site not found");
 
@@ -397,19 +379,16 @@ export function generateActionPlan(siteId) {
     };
   }
 
-  // Build scored list of failed checks using CHECK_META + report.audits
   const failedItems = [];
 
   for (const [taskName, meta] of Object.entries(CHECK_META)) {
     const passed = didCheckPass(meta.checkKey, taskName, latestReport);
     if (passed === false) {
-      // Check FAILED → add to priority list
       const baseScore = IMPACT_SCORE[meta.impact] || 15;
       const effortMultiplier = EFFORT_MULTIPLIER[meta.effort] || 2;
       const categoryBonus = PRIORITY_CATEGORIES.includes(meta.cat) ? 10 : 0;
       const priorityScore = baseScore * effortMultiplier + categoryBonus;
 
-      // Get details from audit data
       const auditData = latestReport.audits[meta.checkKey] || {};
       let details = "";
       if (auditData.details) details = auditData.details;
@@ -427,7 +406,6 @@ export function generateActionPlan(siteId) {
     }
   }
 
-  // Also check Website Speed (score-based, not audit-based)
   if (latestReport.scores && latestReport.scores.performance < 90) {
     failedItems.push({
       task: "Website Speed",
@@ -441,10 +419,8 @@ export function generateActionPlan(siteId) {
     });
   }
 
-  // Sort by priority score (highest first)
   failedItems.sort((a, b) => b.priorityScore - a.priorityScore);
 
-  // Take top 3
   const top3 = failedItems.slice(0, 3);
 
   const actionPlan = top3.map((item, index) => ({
@@ -459,7 +435,6 @@ export function generateActionPlan(siteId) {
     priorityScore: item.priorityScore,
   }));
 
-  // Overall health
   const scores = latestReport.scores || {};
   const avgScore = Math.round(
     ((scores.seo || 0) +
@@ -474,7 +449,6 @@ export function generateActionPlan(siteId) {
   else if (avgScore >= 75) overallHealth = "good";
   else if (avgScore >= 50) overallHealth = "needs-work";
 
-  // Summary
   const totalFailed = failedItems.length;
   let summary = "";
   if (totalFailed === 0) {
@@ -488,7 +462,6 @@ export function generateActionPlan(siteId) {
     summary = `🔴 ${totalFailed} issues need attention. Start with these 3 high-priority quick wins below.`;
   }
 
-  // Estimated improvement
   const potentialGain = top3.reduce((sum, item) => {
     if (item.impact === "High") return sum + 8;
     if (item.impact === "Medium") return sum + 4;
@@ -517,9 +490,8 @@ export function generateActionPlan(siteId) {
   };
 }
 
-// Generate cross-site internal link suggestions
-export function generateLinkSuggestions() {
-  const db = readDb();
+export async function generateLinkSuggestions() {
+  const db = await readDb();
   const sites = db.websites || [];
   if (sites.length < 2) return [];
 
@@ -532,7 +504,6 @@ export function generateLinkSuggestions() {
       const siteA = sites[i];
       const siteB = sites[j];
 
-      // Same group = likely related
       if (
         siteA.group &&
         siteB.group &&
@@ -549,7 +520,6 @@ export function generateLinkSuggestions() {
         });
       }
 
-      // Tag overlap
       const tagsA = siteA.tags || [];
       const tagsB = siteB.tags || [];
       const commonTags = tagsA.filter((t) => tagsB.includes(t));
@@ -566,7 +536,6 @@ export function generateLinkSuggestions() {
     }
   }
 
-  // Deduplicate
   const seen = new Set();
   const unique = suggestions.filter((s) => {
     const key = [s.from, s.to].sort().join("↔");
@@ -578,26 +547,27 @@ export function generateLinkSuggestions() {
   return unique.slice(0, 10);
 }
 
-// Fleet-wide overview
-export function generateFleetPlan() {
-  const db = readDb();
+export async function generateFleetPlan() {
+  const db = await readDb();
   const sites = db.websites || [];
 
-  const sitePlans = sites.map((site) => {
+  const sitePlans = [];
+  for (const site of sites) {
     try {
-      return generateActionPlan(site.id);
+      const plan = await generateActionPlan(site.id);
+      sitePlans.push(plan);
     } catch {
-      return {
+      sitePlans.push({
         site: site.url,
         hostname: new URL(site.url).hostname,
         overallHealth: "unknown",
         actionPlan: [],
         summary: "Unable to generate plan",
-      };
+      });
     }
-  });
+  }
 
-  const linkSuggestions = generateLinkSuggestions();
+  const linkSuggestions = await generateLinkSuggestions();
 
   return {
     totalSites: sites.length,

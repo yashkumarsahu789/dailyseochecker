@@ -1,20 +1,11 @@
-import fs from "fs";
-import path from "path";
-import { readDb } from "./scheduler.js";
+import { readDb } from "../firestore.js";
 
-// ============ PDF REPORT GENERATOR ============
-// Generates HTML reports and saves them as downloadable files
-// For a personal tool, we generate a styled HTML report that can be printed to PDF via browser
+// ============ REPORT GENERATOR ============
+// Generates HTML reports (no file system write in Cloud Functions)
+// Returns HTML string that frontend can render or print-to-PDF
 
-const REPORTS_DIR = path.resolve("data/reports");
-
-// Ensure reports directory exists
-if (!fs.existsSync(REPORTS_DIR)) {
-  fs.mkdirSync(REPORTS_DIR, { recursive: true });
-}
-
-export function generateReport(siteId) {
-  const db = readDb();
+export async function generateReport(siteId) {
+  const db = await readDb();
   const site = db.websites.find((w) => String(w.id) === String(siteId));
   if (!site) throw new Error("Site not found");
 
@@ -48,13 +39,11 @@ export function generateReport(siteId) {
     return "#ef4444";
   };
 
-  // Uptime calculation
   const uptimeChecks = uptime.length;
   const uptimeUp = uptime.filter((u) => u.status === "up").length;
   const uptimePercent =
     uptimeChecks > 0 ? ((uptimeUp / uptimeChecks) * 100).toFixed(1) : "—";
 
-  // Build HTML
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -76,11 +65,6 @@ export function generateReport(siteId) {
     .metric-row { display: flex; justify-content: space-between; padding: 10px 16px; background: #1e293b; border-radius: 8px; margin-bottom: 6px; }
     .metric-row .label { color: #94a3b8; }
     .metric-row .value { font-weight: 600; }
-    .issues-list { list-style: none; }
-    .issues-list li { padding: 10px 16px; background: #1e293b; border-radius: 8px; margin-bottom: 6px; font-size: 14px; border-left: 3px solid; }
-    .issues-list li.critical { border-color: #ef4444; }
-    .issues-list li.warning { border-color: #f97316; }
-    .issues-list li.info { border-color: #3b82f6; }
     .footer { text-align: center; color: #475569; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #1e293b; }
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; padding: 8px 12px; color: #94a3b8; font-size: 11px; text-transform: uppercase; background: #1e293b; }
@@ -95,8 +79,6 @@ export function generateReport(siteId) {
       <p><strong>${hostname}</strong> — ${date}</p>
       <p style="margin-top: 4px; font-size: 12px;">${site.url}</p>
     </div>
-
-    <!-- Scores -->
     <div class="scores">
       <div class="score-card">
         <div class="value" style="color: ${getColor(site.lastScores?.seo || 0)}">${site.lastScores?.seo ?? "—"}</div>
@@ -115,8 +97,6 @@ export function generateReport(siteId) {
         <div class="label">Best Practices</div>
       </div>
     </div>
-
-    <!-- Overview -->
     <div class="section">
       <h2>📋 Overview</h2>
       <div class="metric-row"><span class="label">URL</span><span class="value">${site.url}</span></div>
@@ -126,15 +106,11 @@ export function generateReport(siteId) {
       <div class="metric-row"><span class="label">Tags</span><span class="value">${(site.tags || []).map((t) => "#" + t).join(", ") || "None"}</span></div>
       ${site.notes ? `<div class="metric-row"><span class="label">Notes</span><span class="value">${site.notes}</span></div>` : ""}
     </div>
-
-    <!-- Uptime -->
     <div class="section">
       <h2>📡 Uptime</h2>
       <div class="metric-row"><span class="label">Uptime %</span><span class="value" style="color: ${parseFloat(uptimePercent) >= 99 ? "#22c55e" : "#ef4444"}">${uptimePercent}%</span></div>
       <div class="metric-row"><span class="label">Total Checks</span><span class="value">${uptimeChecks}</span></div>
     </div>
-
-    <!-- Backlinks -->
     <div class="section">
       <h2>🔗 Backlinks (${backlinks.length} active)</h2>
       ${
@@ -152,8 +128,6 @@ export function generateReport(siteId) {
           : `<p style="color: #64748b; text-align: center; padding: 20px;">No backlinks detected yet</p>`
       }
     </div>
-
-    <!-- Keywords -->
     <div class="section">
       <h2>🔑 Keywords (${keywords.length} tracked)</h2>
       ${
@@ -172,25 +146,6 @@ export function generateReport(siteId) {
           : `<p style="color: #64748b; text-align: center; padding: 20px;">No keywords tracked</p>`
       }
     </div>
-
-    <!-- Issues -->
-    ${
-      latestReport && latestReport.issues && latestReport.issues.length > 0
-        ? `<div class="section">
-      <h2>⚠️ Issues Found (${latestReport.issues.length})</h2>
-      <ul class="issues-list">
-        ${latestReport.issues
-          .slice(0, 30)
-          .map(
-            (issue) =>
-              `<li class="${issue.severity === "critical" ? "critical" : issue.severity === "warning" ? "warning" : "info"}">${issue.message || issue.title || JSON.stringify(issue)}</li>`,
-          )
-          .join("")}
-      </ul>
-    </div>`
-        : ""
-    }
-
     <div class="footer">
       <p>Generated by SEO Automation Dashboard — ${date}</p>
       <p style="margin-top: 4px;">Print this page (Ctrl+P) to save as PDF</p>
@@ -199,18 +154,13 @@ export function generateReport(siteId) {
 </body>
 </html>`;
 
-  // Save to file
   const filename = `seo-report_${hostname}_${Date.now()}.html`;
-  const filepath = path.join(REPORTS_DIR, filename);
-  fs.writeFileSync(filepath, html, "utf-8");
-
-  console.log(`📄 Report generated: ${filepath}`);
-  return { filename, filepath, html };
+  console.log(`📄 Report generated: ${filename}`);
+  return { filename, html };
 }
 
-// Generate summary report for all sites
-export function generateSummaryReport() {
-  const db = readDb();
+export async function generateSummaryReport() {
+  const db = await readDb();
   const sites = db.websites || [];
   const date = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -269,7 +219,6 @@ export function generateSummaryReport() {
       <h1>📊 SEO Summary Report</h1>
       <p>${date} — ${sites.length} sites tracked</p>
     </div>
-
     <div class="summary">
       <div class="sum-card">
         <div class="value" style="color: #06b6d4">${sites.length}</div>
@@ -284,7 +233,6 @@ export function generateSummaryReport() {
         <div class="label">Avg Performance</div>
       </div>
     </div>
-
     <table>
       <thead>
         <tr><th>Site</th><th>SEO</th><th>Performance</th><th>Status</th><th>Last Audit</th></tr>
@@ -304,7 +252,6 @@ export function generateSummaryReport() {
           .join("")}
       </tbody>
     </table>
-
     <div class="footer">
       <p>Generated by SEO Automation Dashboard — ${date}</p>
       <p style="margin-top: 4px;">Print this page (Ctrl+P) to save as PDF</p>
@@ -314,9 +261,6 @@ export function generateSummaryReport() {
 </html>`;
 
   const filename = `seo-summary_${Date.now()}.html`;
-  const filepath = path.join(REPORTS_DIR, filename);
-  fs.writeFileSync(filepath, html, "utf-8");
-
-  console.log(`📄 Summary report generated: ${filepath}`);
-  return { filename, filepath, html };
+  console.log(`📄 Summary report generated: ${filename}`);
+  return { filename, html };
 }

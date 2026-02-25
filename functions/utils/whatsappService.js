@@ -1,31 +1,21 @@
 import axios from "axios";
-import { readDb } from "./scheduler.js";
+import { readDb } from "../firestore.js";
 
 // ============ WHATSAPP ALERT SERVICE ============
-// Sends alerts via WhatsApp using CallMeBot or custom webhook
-// Setup: https://www.callmebot.com/blog/free-api-whatsapp-messages/
-//
-// To setup CallMeBot:
-// 1. Add phone number +34 644 71 27 74 to your contacts
-// 2. Send "I allow callmebot to send me messages" via WhatsApp
-// 3. You'll receive your API key
-// 4. Enter phone + apikey in Settings panel
 
-function getWhatsAppConfig() {
-  const db = readDb();
+async function getWhatsAppConfig() {
+  const db = await readDb();
   const settings = db.settings || {};
   return {
     phone: settings.whatsappPhone || "",
     apiKey: settings.whatsappApiKey || "",
-    webhookUrl: settings.whatsappWebhookUrl || "", // Custom webhook alternative
+    webhookUrl: settings.whatsappWebhookUrl || "",
   };
 }
 
-// ============ SEND WHATSAPP ALERT ============
 export async function sendWhatsAppAlert(alerts) {
-  const config = getWhatsAppConfig();
+  const config = await getWhatsAppConfig();
 
-  // Method 1: Custom webhook (e.g., Twilio, WAHA, etc.)
   if (config.webhookUrl) {
     try {
       await axios.post(config.webhookUrl, {
@@ -39,7 +29,6 @@ export async function sendWhatsAppAlert(alerts) {
     }
   }
 
-  // Method 2: CallMeBot Free API
   if (config.phone && config.apiKey) {
     try {
       const message = encodeURIComponent(formatAlertMessage(alerts));
@@ -51,16 +40,13 @@ export async function sendWhatsAppAlert(alerts) {
       console.error("❌ WhatsApp CallMeBot error:", err.message);
     }
   }
-
-  // Not configured — skip silently
 }
 
-// ============ SEND WEEKLY SUMMARY VIA WHATSAPP ============
 export async function sendWhatsAppWeeklySummary() {
-  const config = getWhatsAppConfig();
+  const config = await getWhatsAppConfig();
   if (!config.phone && !config.webhookUrl) return;
 
-  const db = readDb();
+  const db = await readDb();
   const sites = db.websites || [];
   if (sites.length === 0) return;
 
@@ -107,9 +93,8 @@ export async function sendWhatsAppWeeklySummary() {
   }
 }
 
-// ============ TEST WHATSAPP ============
 export async function sendWhatsAppTest() {
-  const config = getWhatsAppConfig();
+  const config = await getWhatsAppConfig();
   if (!config.phone && !config.webhookUrl) {
     throw new Error(
       "WhatsApp not configured. Set phone + API key or webhook URL in Settings.",
@@ -128,7 +113,6 @@ export async function sendWhatsAppTest() {
   console.log("📱 WhatsApp test message sent");
 }
 
-// ============ FORMAT HELPERS ============
 function formatAlertMessage(alerts) {
   const header = `🚨 *SEO Alert: ${alerts.length} issue(s)*\n\n`;
   const body = alerts

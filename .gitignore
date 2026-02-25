@@ -26,9 +26,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# Data files (managed by Railway Volume / local only)
-data/db.sqlite
-data/db.sqlite-wal
-data/db.sqlite-shm
-data/db.json.bak
-data/reports/
+# Firebase
+.firebase/
+functions/node_modules/
+
+# Data files (legacy — no longer used)
+data/

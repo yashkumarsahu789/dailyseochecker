@@ -1,26 +1,12 @@
-import cron from "node-cron";
 import https from "https";
 import http from "http";
-import { readDb, writeDb } from "./scheduler.js";
+import { readDb, writeDb } from "../firestore.js";
 
 // ============ UPTIME MONITOR ============
-// Pings all tracked sites every 5 minutes
-// Stores uptime records and creates alerts on failure
+// Called by Firebase Scheduled Function every 5 minutes
 
-export function startUptimeMonitor() {
-  console.log("✅ Uptime Monitor initialized (checks every 5 minutes)");
-
-  // Run every 5 minutes
-  cron.schedule("*/5 * * * *", async () => {
-    await checkAllSites();
-  });
-
-  // Also run immediately on startup (after 10s delay)
-  setTimeout(() => checkAllSites(), 10000);
-}
-
-async function checkAllSites() {
-  const db = readDb();
+export async function checkAllSites() {
+  const db = await readDb();
   if (!db.uptime) db.uptime = [];
 
   for (const site of db.websites) {
@@ -28,7 +14,7 @@ async function checkAllSites() {
       const result = await pingSite(site.url);
 
       db.uptime.push({
-        siteId: site.id,
+        siteId: Number(site.id),
         status: result.statusCode,
         responseTime: result.responseTime,
         ok: result.ok,
@@ -36,11 +22,10 @@ async function checkAllSites() {
       });
 
       if (!result.ok) {
-        // Create alert for downtime
         if (!db.alerts) db.alerts = [];
         db.alerts.push({
           id: Date.now() + Math.random(),
-          siteId: site.id,
+          siteId: Number(site.id),
           siteName: new URL(site.url).hostname,
           siteUrl: site.url,
           type: "downtime",
@@ -54,9 +39,8 @@ async function checkAllSites() {
         );
       }
     } catch (err) {
-      // Even on error, log downtime
       db.uptime.push({
-        siteId: site.id,
+        siteId: Number(site.id),
         status: 0,
         responseTime: 0,
         ok: false,
@@ -65,7 +49,7 @@ async function checkAllSites() {
     }
   }
 
-  writeDb(db);
+  await writeDb(db);
 }
 
 function pingSite(url) {
@@ -77,7 +61,7 @@ function pingSite(url) {
       url,
       {
         timeout: 10000,
-        headers: { "User-Agent": "LifeSolveNow-UptimeBot/1.0" },
+        headers: { "User-Agent": "DailySEO-UptimeBot/1.0" },
       },
       (res) => {
         const responseTime = Date.now() - start;
@@ -86,7 +70,7 @@ function pingSite(url) {
           responseTime,
           ok: res.statusCode >= 200 && res.statusCode < 400,
         });
-        res.resume(); // Consume response to free memory
+        res.resume();
       },
     );
 
