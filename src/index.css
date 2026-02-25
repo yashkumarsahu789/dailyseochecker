@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* ============ THEME VARIABLES ============ */
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-input: #1e293b;
+  --border-color: #334155;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #06b6d4;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  --border-color: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #0891b2;
+}
+
+/* ============ SCROLLBAR ============ */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ============ MOBILE RESPONSIVE ============ */
+@media (max-width: 640px) {
+  /* Smaller padding on mobile */
+  .mobile-p {
+    padding: 1rem !important;
+  }
+
+  /* Stack form inputs vertically */
+  .mobile-stack {
+    flex-direction: column;
+  }
+
+  /* Tabs scroll horizontally */
+  .tabs-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Modal full screen on mobile */
+  .modal-responsive {
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* ============ ANIMATIONS ============ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ============ LIGHT THEME OVERRIDES ============ */
+[data-theme="light"] .bg-slate-900 {
+  background-color: var(--bg-primary);
+}
+[data-theme="light"] .bg-slate-800 {
+  background-color: var(--bg-secondary);
+}
+[data-theme="light"] .bg-slate-800\/30,
+[data-theme="light"] .bg-slate-800\/50,
+[data-theme="light"] .bg-slate-800\/20 {
+  background-color: rgba(241, 245, 249, 0.5);
+}
+[data-theme="light"] .bg-slate-900\/50 {
+  background-color: rgba(241, 245, 249, 0.5);
+}
+[data-theme="light"] .bg-slate-900\/60 {
+  background-color: rgba(241, 245, 249, 0.6);
+}
+[data-theme="light"] .text-white {
+  color: var(--text-primary);
+}
+[data-theme="light"] .text-slate-400 {
+  color: var(--text-secondary);
+}
+[data-theme="light"] .text-slate-500 {
+  color: var(--text-muted);
+}
+[data-theme="light"] .text-slate-300 {
+  color: #334155;
+}
+[data-theme="light"] .border-slate-700 {
+  border-color: var(--border-color);
+}
+[data-theme="light"] .border-slate-800 {
+  border-color: var(--border-color);
+}
+[data-theme="light"] .bg-slate-700 {
+  background-color: #e2e8f0;
+}
+[data-theme="light"] .bg-slate-700:hover {
+  background-color: #cbd5e1;
+}
+[data-theme="light"] .text-slate-400:hover {
+  color: #0f172a;
+}
