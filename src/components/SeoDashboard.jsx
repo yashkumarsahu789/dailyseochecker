@@ -178,7 +178,7 @@ export default function SeoDashboard() {
     >
       <div className="max-w-6xl mx-auto">
         <header className="mb-10 text-center relative">
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-extrabold bg-linear-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent mb-2">
             SEO Automation Dashboard
           </h1>
           <p className="text-slate-400">42-Point Professional SEO Audit</p>
@@ -224,7 +224,7 @@ export default function SeoDashboard() {
               {errorConsole.map((err, idx) => (
                 <div
                   key={idx}
-                  className="mb-1 pb-1 border-b border-red-900/30 last:border-0 break-words"
+                  className="mb-1 pb-1 border-b border-red-900/30 last:border-0 wrap-break-word"
                 >
                   <span className="text-slate-500 text-xs">[{err.time}]</span>{" "}
                   <span className="font-bold">[{err.category}]</span>:{" "}
@@ -260,7 +260,7 @@ export default function SeoDashboard() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-8 py-4 rounded-lg font-bold transition shadow-lg shadow-cyan-500/20 disabled:opacity-50 text-lg whitespace-nowrap"
+            className="bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-8 py-4 rounded-lg font-bold transition shadow-lg shadow-cyan-500/20 disabled:opacity-50 text-lg whitespace-nowrap"
           >
             {loading ? "Adding..." : "Track Website"}
           </button>

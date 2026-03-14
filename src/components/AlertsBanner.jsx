@@ -53,7 +53,7 @@ export default function AlertsBanner() {
   if (alerts.length === 0) return null;
 
   return (
-    <div className="mb-8 bg-gradient-to-r from-red-950/60 to-amber-950/40 border border-red-500/30 rounded-2xl p-5 shadow-xl shadow-red-500/5">
+    <div className="mb-8 bg-linear-to-r from-red-950/60 to-amber-950/40 border border-red-500/30 rounded-2xl p-5 shadow-xl shadow-red-500/5">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-red-400 font-bold flex items-center gap-2 text-lg">
           <span className="text-2xl animate-pulse">🔔</span>
