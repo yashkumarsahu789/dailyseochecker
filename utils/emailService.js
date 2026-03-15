@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { readDb } from "../firestore.js";
+import { readDb } from "./db.js";
 
 // ============ EMAIL SERVICE ============
 

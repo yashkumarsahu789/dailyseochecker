@@ -1,4 +1,4 @@
-import { readDb } from "../firestore.js";
+import { readDb } from "./db.js";
 
 // ============ WEBSITE ANALYTICS & INSIGHTS ENGINE ============
 // Generates comprehensive analytics insights from audit, uptime, keyword, and backlink data

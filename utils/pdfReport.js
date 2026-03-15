@@ -1,4 +1,4 @@
-import { readDb } from "../firestore.js";
+import { readDb } from "./db.js";
 
 // ============ REPORT GENERATOR ============
 // Generates HTML reports (no file system write in Cloud Functions)

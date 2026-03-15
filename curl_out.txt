@@ -1,0 +1,1 @@
+﻿{"error":"7 PERMISSION_DENIED: Permission denied on resource project dailyseochecker."}

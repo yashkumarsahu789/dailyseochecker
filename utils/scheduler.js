@@ -1,4 +1,4 @@
-import { readDb, writeDb } from "../firestore.js";
+import { readDb, writeDb } from "./db.js";
 import { runSeoAudit } from "./seoAudit.js";
 import { sendAlertEmail, sendWeeklyReport } from "./emailService.js";
 import {

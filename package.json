@@ -5,16 +5,24 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server.js",
+    "dev-full": "start \"Server\" npm run server & start \"Client\" npm run dev",
     "build": "vite build",
+    "start": "node server.js",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "emulators": "firebase emulators:start",
-    "deploy": "npm run build && firebase deploy"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
     "@tailwindcss/vite": "^4.1.18",
-    "firebase": "^12.9.0",
+    "axios": "^1.13.6",
+    "better-sqlite3": "^12.8.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "firebase": "^12.10.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.7.0",

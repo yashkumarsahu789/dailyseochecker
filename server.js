@@ -1,7 +1,8 @@
-import { onRequest } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
 import express from "express";
 import cors from "cors";
+import cron from "node-cron";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   readDb,
   writeDb,
@@ -21,7 +22,7 @@ import {
   getKeywords,
   getBacklinks,
   getGroups,
-} from "./firestore.js";
+} from "./utils/db.js";
 import { runSeoAudit } from "./utils/seoAudit.js";
 import { sendTestEmail, sendWeeklyReport } from "./utils/emailService.js";
 import { sendWhatsAppTest } from "./utils/whatsappService.js";
@@ -31,6 +32,9 @@ import {
   generateLinkSuggestions,
   generateFleetPlan,
 } from "./utils/actionPlanEngine.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ============ Express App ============
 const app = express();
@@ -401,7 +405,9 @@ app.get("/api/fleet-plan", async (req, res) => {
 app.get("/api/websites/:id/analytics", async (req, res) => {
   try {
     const { id } = req.params;
-    const { getWebsiteAnalytics } = await import("./utils/analyticsService.js");
+    const { getWebsiteAnalytics } = await import(
+      "./utils/analyticsService.js"
+    );
     const analytics = await getWebsiteAnalytics(id);
     res.json(analytics);
   } catch (error) {
@@ -409,98 +415,59 @@ app.get("/api/websites/:id/analytics", async (req, res) => {
   }
 });
 
-// ============ Export as Firebase Cloud Function ============
-export const api = onRequest(
-  { region: "asia-south1", timeoutSeconds: 300, memory: "512MiB" },
-  app,
-);
+// ============ BACKGROUND TASKS (node-cron) ============
 
-// ============ Scheduled Functions ============
+console.log("✅ Mainting background jobs (cron)");
 
-// Daily SEO Audit — runs at midnight IST
-export const dailyAudit = onSchedule(
-  {
-    schedule: "0 0 * * *",
-    timeZone: "Asia/Kolkata",
-    region: "asia-south1",
-    timeoutSeconds: 540,
-    memory: "512MiB",
-  },
-  async () => {
-    console.log("🔄 Running daily SEO audit...");
-    const { runAllAudits } = await import("./utils/scheduler.js");
-    await runAllAudits();
-  },
-);
+// Daily SEO Audit — midnight
+cron.schedule("0 0 * * *", async () => {
+  console.log("🔄 Running daily SEO audit");
+  const { runAllAudits } = await import("./utils/scheduler.js");
+  await runAllAudits();
+});
 
-// Uptime check — every 5 minutes
-export const uptimeCheck = onSchedule(
-  {
-    schedule: "every 5 minutes",
-    region: "asia-south1",
-    timeoutSeconds: 60,
-    memory: "256MiB",
-  },
-  async () => {
-    const { checkAllSites } = await import("./utils/uptimeMonitor.js");
-    await checkAllSites();
-  },
-);
+// Uptime Check — every 5 mins
+cron.schedule("*/5 * * * *", async () => {
+  const { checkAllSites } = await import("./utils/uptimeMonitor.js");
+  await checkAllSites();
+});
 
-// Keyword rank check — daily at 1 AM IST
-export const keywordCheck = onSchedule(
-  {
-    schedule: "0 1 * * *",
-    timeZone: "Asia/Kolkata",
-    region: "asia-south1",
-    timeoutSeconds: 300,
-    memory: "256MiB",
-  },
-  async () => {
-    console.log("🔑 Running daily keyword rank check...");
-    const { checkAllKeywords } = await import("./utils/keywordTracker.js");
-    await checkAllKeywords();
-  },
-);
+// Keywords Check — 1 AM
+cron.schedule("0 1 * * *", async () => {
+  console.log("🔑 Running daily keyword check");
+  const { checkAllKeywords } = await import("./utils/keywordTracker.js");
+  await checkAllKeywords();
+});
 
-// Backlink check — daily at 2 AM IST
-export const backlinkCheck = onSchedule(
-  {
-    schedule: "0 2 * * *",
-    timeZone: "Asia/Kolkata",
-    region: "asia-south1",
-    timeoutSeconds: 300,
-    memory: "256MiB",
-  },
-  async () => {
-    console.log("🔗 Running backlink check...");
-    const { checkAllBacklinks } = await import("./utils/backlinkMonitor.js");
-    await checkAllBacklinks();
-  },
-);
+// Backlinks Check — 2 AM
+cron.schedule("0 2 * * *", async () => {
+  console.log("🔗 Running backlink monitor");
+  const { checkAllBacklinks } = await import("./utils/backlinkMonitor.js");
+  await checkAllBacklinks();
+});
 
-// Weekly report — Monday at 7 AM IST
-export const weeklyReport = onSchedule(
-  {
-    schedule: "0 7 * * 1",
-    timeZone: "Asia/Kolkata",
-    region: "asia-south1",
-    timeoutSeconds: 120,
-    memory: "256MiB",
-  },
-  async () => {
-    console.log("📧 Sending weekly report...");
-    try {
-      await sendWeeklyReport();
-    } catch (err) {
-      console.error("❌ Weekly report email failed:", err.message);
-    }
-    try {
-      const { sendWhatsAppWeeklySummary } =
-        await import("./utils/whatsappService.js");
-      await sendWhatsAppWeeklySummary();
-    } catch (err) {
-      console.error("❌ WhatsApp weekly summary failed:", err.message);
-    }
-  },
-);
+// Weekly Report — Monday 7 AM
+cron.schedule("0 7 * * 1", async () => {
+  console.log("📧 Sending weekly report...");
+  try {
+    await sendWeeklyReport();
+  } catch (err) {
+    console.error("❌ Weekly report email failed:", err.message);
+  }
+  try {
+    const { sendWhatsAppWeeklySummary } = await import("./utils/whatsappService.js");
+    await sendWhatsAppWeeklySummary();
+  } catch (err) {
+    console.error("❌ WhatsApp weekly summary failed:", err.message);
+  }
+});
+
+// ============ STATIC FILES & START ============
+
+// Serve Vite build in production
+app.use(express.static(path.join(__dirname, "dist")));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Express server running on port ${PORT}`);
+});

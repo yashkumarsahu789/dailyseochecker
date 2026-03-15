@@ -1,6 +1,6 @@
 import https from "https";
 import http from "http";
-import { readDb, writeDb } from "../firestore.js";
+import { readDb, writeDb } from "./db.js";
 
 // ============ UPTIME MONITOR ============
 // Called by Firebase Scheduled Function every 5 minutes

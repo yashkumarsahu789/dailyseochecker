@@ -1,5 +1,5 @@
 import axios from "axios";
-import { readDb } from "../firestore.js";
+import { readDb } from "./db.js";
 
 // ============ WHATSAPP ALERT SERVICE ============
 

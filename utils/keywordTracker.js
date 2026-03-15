@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { readDb, writeDb } from "../firestore.js";
+import { readDb, writeDb } from "./db.js";
 
 // ============ KEYWORD RANK TRACKER ============
 // Called by Firebase Scheduled Function daily at 1 AM

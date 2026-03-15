@@ -1,4 +1,4 @@
-import { readDb } from "../firestore.js";
+import { readDb } from "./db.js";
 
 // ============ AI ACTION PLAN ENGINE ============
 // Analyzes audit data and generates a prioritized "Top 3 Fixes" action plan.
