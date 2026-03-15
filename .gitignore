@@ -26,8 +26,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Firebase
-.firebase/
+
 functions/node_modules/
 
 # Data files (legacy — no longer used)
