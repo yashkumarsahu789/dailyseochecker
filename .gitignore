@@ -1,3 +1,5 @@
+dist/
+.deploy/
 # Logs
 logs
 *.log
