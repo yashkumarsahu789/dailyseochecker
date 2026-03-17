@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/,
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  base: "/dailyseochecker/", // Set this to your repo name for GitHub Pages
-});
+  base: command === 'build' ? '/dailyseochecker/' : '/', // Use repo name for build, root for dev
+}));
