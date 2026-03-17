@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function UptimeTab({ selectedSite }) {
+import { getUptime } from "../utils/firestore.js";export default function UptimeTab({ selectedSite }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,8 +11,7 @@ export default function UptimeTab({ selectedSite }) {
   const fetchUptime = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/uptime/${selectedSite.id}`);
-      const data = await res.json();
+      const data = await getUptime(selectedSite.id);
       if (Array.isArray(data)) setRecords(data);
     } catch {
       // Silently fail

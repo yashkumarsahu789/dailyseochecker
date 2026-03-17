@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function BacklinksTab({ selectedSite }) {
+import { getBacklinks } from "../utils/firestore.js";export default function BacklinksTab({ selectedSite }) {
   const [data, setData] = useState({ active: [], lost: [], total: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -13,10 +11,7 @@ export default function BacklinksTab({ selectedSite }) {
   const fetchBacklinks = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API_BASE}/websites/${selectedSite.id}/backlinks`,
-      );
-      const result = await res.json();
+      const result = await getBacklinks(selectedSite.id);
       setData(result);
     } catch {
       // Silently fail

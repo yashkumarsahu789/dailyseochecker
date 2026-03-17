@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function SiteEditModal({ site, onClose, onSaved }) {
+import { updateWebsiteDetails } from "../utils/firestore.js";export default function SiteEditModal({ site, onClose, onSaved }) {
   const [notes, setNotes] = useState(site.notes || "");
   const [group, setGroup] = useState(site.group || "Ungrouped");
   const [tagInput, setTagInput] = useState("");
@@ -39,11 +37,7 @@ export default function SiteEditModal({ site, onClose, onSaved }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetch(`${API_BASE}/websites/${site.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes, tags, group, gaPropertyId }),
-      });
+      await updateWebsiteDetails(site.id, { notes, tags, group, gaPropertyId });
       onSaved();
       onClose();
     } catch {

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function ActionPlanTab({ selectedSite }) {
+import { getActionPlan } from "../utils/firestore.js";export default function ActionPlanTab({ selectedSite }) {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [linkSuggestions, setLinkSuggestions] = useState([]);
@@ -14,14 +12,9 @@ export default function ActionPlanTab({ selectedSite }) {
   const fetchPlan = async () => {
     setLoading(true);
     try {
-      const [planRes, linksRes] = await Promise.all([
-        fetch(`${API_BASE}/websites/${selectedSite.id}/action-plan`),
-        fetch(`${API_BASE}/link-suggestions`),
-      ]);
-      const planData = await planRes.json();
-      const linksData = await linksRes.json();
+      const planData = await getActionPlan(selectedSite.id);
       setPlan(planData);
-      setLinkSuggestions(linksData || []);
+      setLinkSuggestions([]);
     } catch {
       // Silently fail
     } finally {

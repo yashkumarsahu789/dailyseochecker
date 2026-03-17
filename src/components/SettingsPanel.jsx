@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function SettingsPanel({ isOpen, onClose }) {
+import { getSettings, updateSettings as saveDbSettings, sendTestEmail, sendWeeklyReport, sendWhatsAppTest, getSummaryPdf } from "../utils/firestore.js";export default function SettingsPanel({ isOpen, onClose }) {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -13,8 +11,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch(`${API_BASE}/settings`);
-      const data = await res.json();
+      const data = await getSettings();
       setSettings(data);
     } catch {
       // Silently fail
@@ -24,11 +21,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await fetch(`${API_BASE}/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
+      await saveDbSettings(settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -235,13 +228,10 @@ export default function SettingsPanel({ isOpen, onClose }) {
               <button
                 onClick={async () => {
                   try {
-                    const res = await fetch(`${API_BASE}/settings/test-email`, {
-                      method: "POST",
-                    });
-                    const data = await res.json();
-                    alert(res.ok ? "✅ Test email sent!" : `❌ ${data.error}`);
-                  } catch {
-                    alert("❌ Failed to send test email");
+                    await sendTestEmail();
+                    alert("✅ Test email sent!");
+                  } catch (err) {
+                    alert("❌ Failed to send test email: " + err.message);
                   }
                 }}
                 className="flex-1 py-2 rounded-lg text-xs font-bold bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
@@ -251,16 +241,10 @@ export default function SettingsPanel({ isOpen, onClose }) {
               <button
                 onClick={async () => {
                   try {
-                    const res = await fetch(
-                      `${API_BASE}/settings/weekly-report`,
-                      { method: "POST" },
-                    );
-                    const data = await res.json();
-                    alert(
-                      res.ok ? "✅ Weekly report sent!" : `❌ ${data.error}`,
-                    );
-                  } catch {
-                    alert("❌ Failed");
+                    await sendWeeklyReport();
+                    alert("✅ Weekly report sent!");
+                  } catch (err) {
+                    alert("❌ Failed: " + err.message);
                   }
                 }}
                 className="flex-1 py-2 rounded-lg text-xs font-bold bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
@@ -326,16 +310,10 @@ export default function SettingsPanel({ isOpen, onClose }) {
                 <button
                   onClick={async () => {
                     try {
-                      const res = await fetch(
-                        `${API_BASE}/settings/test-whatsapp`,
-                        { method: "POST" },
-                      );
-                      const data = await res.json();
-                      alert(
-                        res.ok ? "✅ WhatsApp test sent!" : `❌ ${data.error}`,
-                      );
-                    } catch {
-                      alert("❌ Failed to send WhatsApp test");
+                      await sendWhatsAppTest();
+                      alert("✅ WhatsApp test sent!");
+                    } catch (err) {
+                      alert("❌ Failed to send WhatsApp test: " + err.message);
                     }
                   }}
                   className="w-full py-2 rounded-lg text-xs font-bold bg-green-700 hover:bg-green-600 text-white transition"
@@ -358,15 +336,14 @@ export default function SettingsPanel({ isOpen, onClose }) {
                 <button
                   onClick={async () => {
                     try {
-                      const res = await fetch(`${API_BASE}/report/summary`);
-                      const data = await res.json();
-                      if (data.html) {
+                      const data = await getSummaryPdf();
+                      if (data?.html) {
                         const w = window.open("", "_blank");
                         w.document.write(data.html);
                         w.document.close();
                       }
-                    } catch {
-                      alert("❌ Failed to generate report");
+                    } catch (err) {
+                      alert("❌ Failed to generate report: " + err.message);
                     }
                   }}
                   className="flex-1 py-2 rounded-lg text-xs font-bold bg-slate-700 hover:bg-slate-600 text-slate-300 transition"

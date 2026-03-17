@@ -15,6 +15,14 @@ import BacklinksTab from "./BacklinksTab";
 import AnalyticsTab from "./AnalyticsTab";
 import ActionPlanTab from "./ActionPlanTab";
 
+import { 
+  getAllWebsites, 
+  addWebsite as addDbWebsite, 
+  deleteWebsite as deleteDbWebsite, 
+  getReportsForSite, 
+  requestManualAudit,
+  getSitePdf
+} from "../utils/firestore.js";
 import { API_BASE } from "../config.js";
 
 export default function SeoDashboard() {
@@ -57,8 +65,7 @@ export default function SeoDashboard() {
 
   const fetchWebsites = async () => {
     try {
-      const res = await fetch(`${API_BASE}/websites`);
-      const data = await res.json();
+      const data = await getAllWebsites();
       if (Array.isArray(data)) {
         setWebsites(data);
       }
@@ -72,13 +79,7 @@ export default function SeoDashboard() {
     if (!urlInput) return;
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/websites`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      await addDbWebsite(urlInput);
       setUrlInput("");
       fetchWebsites();
     } catch (err) {
@@ -91,7 +92,7 @@ export default function SeoDashboard() {
   const deleteSite = async (id) => {
     if (!confirm("Delete this site and all its reports?")) return;
     try {
-      await fetch(`${API_BASE}/websites/${id}`, { method: "DELETE" });
+      await deleteDbWebsite(id);
       fetchWebsites();
     } catch (err) {
       logError("Delete", "Failed to delete website", err);
@@ -101,15 +102,11 @@ export default function SeoDashboard() {
   const runAudit = async (id) => {
     try {
       logError("Audit", `Starting audit for site ID: ${id}...`, {});
-      const res = await fetch(`${API_BASE}/websites/${id}/audit`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      await requestManualAudit(id);
 
       // Start Polling
       setWebsites((prev) =>
-        prev.map((w) => (w.id === id ? { ...w, lastStatus: "RUNNING" } : w)),
+        prev.map((w) => (String(w.id) === String(id) ? { ...w, lastStatus: "RUNNING" } : w)),
       );
       pollStatus(id);
     } catch (err) {
@@ -120,9 +117,8 @@ export default function SeoDashboard() {
   const pollStatus = async (id) => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${API_BASE}/websites`);
-        const data = await res.json();
-        const site = data.find((w) => w.id === id);
+        const data = await getAllWebsites();
+        const site = data.find((w) => String(w.id) === String(id));
 
         if (
           site &&
@@ -131,10 +127,8 @@ export default function SeoDashboard() {
         ) {
           clearInterval(interval);
           setWebsites(data);
-          // Refresh report if we are viewing this site
-          // Note: accessing selectedSite state in closure might be stale, but good enough for now
-          // A safer way is to just fetch reports if the modal is open for this ID
-          if (selectedSite && selectedSite.id === id) {
+          
+          if (selectedSite && String(selectedSite.id) === String(id)) {
             viewReport(site);
           }
         }
@@ -150,8 +144,7 @@ export default function SeoDashboard() {
   const viewReport = async (site) => {
     setSelectedSite(site);
     try {
-      const res = await fetch(`${API_BASE}/reports/${site.id}`);
-      const data = await res.json();
+      const data = await getReportsForSite(site.id);
       setReports(data || []);
     } catch (err) {
       logError("Report", "Failed to load report history", err);
@@ -423,17 +416,14 @@ export default function SeoDashboard() {
                   <button
                     onClick={async () => {
                       try {
-                        const res = await fetch(
-                          `${API_BASE}/websites/${selectedSite.id}/report`,
-                        );
-                        const data = await res.json();
-                        if (data.html) {
+                        const data = await getSitePdf(selectedSite.id);
+                        if (data?.html) {
                           const w = window.open("", "_blank");
                           w.document.write(data.html);
                           w.document.close();
                         }
-                      } catch {
-                        alert("❌ Failed to generate report");
+                      } catch (err) {
+                        alert("❌ Failed to generate report: " + err.message);
                       }
                     }}
                     className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-4 h-10 rounded-full flex items-center justify-center transition text-sm font-bold gap-1"

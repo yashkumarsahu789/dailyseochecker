@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { API_BASE } from "../config.js";
+import { getAnalyticsData } from "../utils/firestore.js";
 
 export default function AnalyticsTab({ selectedSite }) {
   const [data, setData] = useState(null);
@@ -20,10 +20,9 @@ export default function AnalyticsTab({ selectedSite }) {
     if (selectedSite?.id) {
       setLoading(true);
       setError(null);
-      fetch(`${API_BASE}/websites/${selectedSite.id}/analytics`)
-        .then((res) => res.json())
+      getAnalyticsData(selectedSite.id)
         .then((d) => {
-          if (d.error) throw new Error(d.error);
+          if (!d) throw new Error("No data found");
           setData(d);
         })
         .catch((e) => setError(e.message))

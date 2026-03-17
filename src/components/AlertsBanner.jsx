@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function AlertsBanner() {
+import { getAlerts, dismissAlert as dismissSingleAlert, dismissAllAlerts } from "../utils/firestore.js";export default function AlertsBanner() {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
@@ -14,8 +12,7 @@ export default function AlertsBanner() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch(`${API_BASE}/alerts`);
-      const data = await res.json();
+      const data = await getAlerts();
       if (Array.isArray(data)) setAlerts(data);
     } catch {
       // Silently fail
@@ -24,7 +21,7 @@ export default function AlertsBanner() {
 
   const dismissAlert = async (id) => {
     try {
-      await fetch(`${API_BASE}/alerts/${id}`, { method: "DELETE" });
+      await dismissSingleAlert(id);
       setAlerts((prev) => prev.filter((a) => String(a.id) !== String(id)));
     } catch {
       // Silently fail
@@ -33,7 +30,7 @@ export default function AlertsBanner() {
 
   const dismissAll = async () => {
     try {
-      await fetch(`${API_BASE}/alerts`, { method: "DELETE" });
+      await dismissAllAlerts();
       setAlerts([]);
     } catch {
       // Silently fail

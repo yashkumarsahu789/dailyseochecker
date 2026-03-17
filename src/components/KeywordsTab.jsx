@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { API_BASE } from "../config.js";
-
-export default function KeywordsTab({ selectedSite }) {
+import { getKeywords, addKeywordsForSite, deleteKeywordForSite, checkKeywordRanks } from "../utils/firestore.js";export default function KeywordsTab({ selectedSite }) {
   const [keywords, setKeywords] = useState([]);
   const [ranks, setRanks] = useState([]);
   const [newKeyword, setNewKeyword] = useState("");
@@ -16,10 +14,7 @@ export default function KeywordsTab({ selectedSite }) {
   const fetchKeywords = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API_BASE}/websites/${selectedSite.id}/keywords`,
-      );
-      const data = await res.json();
+      const data = await getKeywords(selectedSite.id);
       setKeywords(data.keywords || []);
       setRanks(data.ranks || []);
     } catch {
@@ -33,11 +28,7 @@ export default function KeywordsTab({ selectedSite }) {
     e.preventDefault();
     if (!newKeyword.trim()) return;
     try {
-      await fetch(`${API_BASE}/websites/${selectedSite.id}/keywords`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords: [newKeyword.trim().toLowerCase()] }),
-      });
+      await addKeywordsForSite(selectedSite.id, [newKeyword.trim().toLowerCase()]);
       setNewKeyword("");
       fetchKeywords();
     } catch {
@@ -47,10 +38,7 @@ export default function KeywordsTab({ selectedSite }) {
 
   const removeKeyword = async (keyword) => {
     try {
-      await fetch(
-        `${API_BASE}/websites/${selectedSite.id}/keywords/${encodeURIComponent(keyword)}`,
-        { method: "DELETE" },
-      );
+      await deleteKeywordForSite(selectedSite.id, keyword);
       fetchKeywords();
     } catch {
       // Silently fail
@@ -60,9 +48,7 @@ export default function KeywordsTab({ selectedSite }) {
   const triggerCheck = async () => {
     setChecking(true);
     try {
-      await fetch(`${API_BASE}/websites/${selectedSite.id}/keywords/check`, {
-        method: "POST",
-      });
+      await checkKeywordRanks();
       // Wait a bit then refresh
       setTimeout(() => {
         fetchKeywords();
