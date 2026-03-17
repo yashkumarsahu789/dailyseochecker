@@ -1,16 +1,48 @@
-# React + Vite
+# Daily SEO Checker – Full Stack (Express.js + React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is a full-stack SEO dashboard app using:
+- **Frontend:** React (Vite, TailwindCSS)
+- **Backend:** Express.js (Node.js)
 
-Currently, two official plugins are available:
+## Local Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. **Install dependencies:**
+	```bash
+	npm install
+	```
+2. **Start backend server:**
+	```bash
+	npm run server
+	# Runs Express.js backend on http://localhost:3000
+	```
+3. **Start frontend (in another terminal):**
+	```bash
+	npm run dev
+	# Runs React app on http://localhost:5173 (Vite)
+	# API requests to /api/* are proxied to backend
+	```
 
-## React Compiler
+## Production Build & Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Build frontend:**
+	```bash
+	npm run build
+	```
+2. **Start full-stack app:**
+	```bash
+	npm start
+	# Serves built frontend and Express.js API from the same server
+	```
 
-## Expanding the ESLint configuration
+## Environment Variables
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `.env` file (for frontend):
+  - `VITE_API_URL` should be set to your deployed backend URL (e.g. Railway, Render, etc.)
+
+## Deployment
+
+You can deploy this app on Railway, Render, or any Node.js-compatible host. Just make sure to set environment variables and use `npm run build` + `npm start` for production.
+
+---
+**All API endpoints are handled by Express.js backend.**
+Frontend and backend are fully decoupled and ready for deployment from this repository.
